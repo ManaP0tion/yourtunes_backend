@@ -1,13 +1,14 @@
 package com.example.yourtunes_backend.User;
 
 import com.example.yourtunes_backend.Config.JwtTokenProvider;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.Optional;
+import java.util.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -18,11 +19,12 @@ public class UserController {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
 
-    // 회원 가입
+    // 회원가입
     @PostMapping("/register")
-    public ResponseEntity<String> register(@RequestBody UserDTO userDTO) {
-        if (userRepository.findByUsername(userDTO.getUsername()) != null) {
-            return ResponseEntity.status(409).body("Username already exists");
+    public ResponseEntity<String> register(@RequestBody @Valid UserRequestDTO userDTO) {
+        if (userRepository.findByUsername(userDTO.getUsername()) != null ||
+                userRepository.findByUserEmail(userDTO.getUserEmail()) != null) {
+            return ResponseEntity.status(409).body("Username or Email already exists");
         }
 
         User user = new User();
@@ -40,43 +42,62 @@ public class UserController {
 
     // 로그인
     @PostMapping("/login")
-    public ResponseEntity<String> login(@RequestBody LoginDTO loginDTO) {
+    public ResponseEntity<?> login(@RequestBody @Valid LoginDTO loginDTO) {
         User user = userRepository.findByUsername(loginDTO.getUsername());
         if (user == null || !passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {
             return ResponseEntity.status(401).body("Invalid credentials");
         }
+
         String token = jwtTokenProvider.createToken(user.getUsername());
-        return ResponseEntity.ok(token);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("token", token);
+        response.put("userId", user.getUserId());
+        response.put("username", user.getUsername());
+        response.put("userImage", user.getUserImage());
+
+        return ResponseEntity.ok(response);
     }
 
     // 유저 단일 조회
     @GetMapping("/{userId}")
-    public ResponseEntity<UserDTO> getUser(@PathVariable int userId) {
-        Optional<User> userOptional = userRepository.findById(userId);
-        if (userOptional.isEmpty()) return ResponseEntity.status(404).build();
+    public ResponseEntity<UserResponseDTO> getUser(@PathVariable int userId) {
+        Optional<User> optionalUser = userRepository.findById(userId);
+        if (optionalUser.isEmpty()) return ResponseEntity.status(404).build();
 
-        User user = userOptional.get();
-        UserDTO dto = new UserDTO();
+        User user = optionalUser.get();
+        UserResponseDTO dto = new UserResponseDTO();
+        dto.setUserId(user.getUserId());
         dto.setUsername(user.getUsername());
         dto.setUserEmail(user.getUserEmail());
         dto.setUserBday(user.getUserBday());
         dto.setUserImage(user.getUserImage());
+        dto.setUserCreate(user.getUserCreate());
+
         return ResponseEntity.ok(dto);
     }
 
     // 전체 유저 조회
     @GetMapping("/all")
-    public ResponseEntity<?> getAllUsers() {
-        Iterable<User> users = userRepository.findAll();
-        if (!users.iterator().hasNext()) {
-            return ResponseEntity.status(404).body("등록된 유저가 없습니다");
+    public ResponseEntity<List<UserResponseDTO>> getAllUsers() {
+        List<UserResponseDTO> result = new ArrayList<>();
+        for (User user : userRepository.findAll()) {
+            UserResponseDTO dto = new UserResponseDTO();
+            dto.setUserId(user.getUserId());
+            dto.setUsername(user.getUsername());
+            dto.setUserEmail(user.getUserEmail());
+            dto.setUserBday(user.getUserBday());
+            dto.setUserImage(user.getUserImage());
+            dto.setUserCreate(user.getUserCreate());
+            result.add(dto);
         }
-        return ResponseEntity.ok(users);
+
+        return ResponseEntity.ok(result);
     }
 
-    // 유저 수정
+    // 유저 정보 수정
     @PutMapping("/{userId}")
-    public ResponseEntity<String> updateUser(@PathVariable int userId, @RequestBody UserDTO dto) {
+    public ResponseEntity<String> updateUser(@PathVariable int userId, @RequestBody UserRequestDTO dto) {
         Optional<User> optionalUser = userRepository.findById(userId);
         if (optionalUser.isEmpty()) return ResponseEntity.status(404).body("User not found");
 
