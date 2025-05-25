@@ -17,8 +17,6 @@ public class PostController {
     private final PostRepository postRepository;
     private final FileService fileService;
 
-
-    // CREATE
     @PostMapping
     public ResponseEntity<?> createPost(
             @RequestParam("title") String title,
@@ -36,13 +34,11 @@ public class PostController {
         return ResponseEntity.ok(post);
     }
 
-    // READ ALL
     @GetMapping
     public List<Post> getAllPosts() {
         return postRepository.findAll();
     }
 
-    // READ ONE
     @GetMapping("/{id}")
     public ResponseEntity<?> getPostById(@PathVariable Long id) {
         return postRepository.findById(id)
@@ -50,19 +46,16 @@ public class PostController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // READ BY USER
     @GetMapping("/user/{userId}")
     public List<Post> getPostsByUser(@PathVariable String userId) {
         return postRepository.findByUserId(userId);
     }
 
-    // SEARCH BY TITLE
     @GetMapping("/search")
     public List<Post> searchByTitle(@RequestParam String keyword) {
         return postRepository.findByTitleContainingIgnoreCase(keyword);
     }
 
-    // UPDATE
     @PutMapping("/{id}")
     public ResponseEntity<?> updatePost(
             @PathVariable Long id,
@@ -73,7 +66,6 @@ public class PostController {
         return postRepository.findById(id).map(post -> {
             post.setTitle(title);
             post.setContent(content);
-
             if (image != null) {
                 try {
                     String newImagePath = fileService.save(image, "images");
@@ -82,19 +74,16 @@ public class PostController {
                     return ResponseEntity.status(500).body("Image upload failed");
                 }
             }
-
             postRepository.save(post);
             return ResponseEntity.ok(post);
         }).orElse(ResponseEntity.notFound().build());
     }
 
-    // DELETE
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deletePost(@PathVariable Long id) {
         if (!postRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
-
         postRepository.deleteById(id);
         return ResponseEntity.ok("Post deleted");
     }
