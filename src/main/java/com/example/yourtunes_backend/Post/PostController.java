@@ -22,10 +22,10 @@ public class PostController {
             @RequestParam("title") String title,
             @RequestParam("content") String content,
             @RequestParam(value = "image", required = false) MultipartFile image,
-            @RequestParam("audio") MultipartFile audio,
+            @RequestParam(value = "audio", required = false) MultipartFile audio,
             @RequestParam("userId") String userId
     ) throws IOException {
-        String audioPath = fileService.save(audio, "audio");
+        String audioPath = audio != null ? fileService.save(audio, "audio") : null;
         String imagePath = image != null ? fileService.save(image, "images") : null;
 
         Post post = new Post(title, content, audioPath, imagePath, userId);

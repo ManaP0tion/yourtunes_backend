@@ -16,7 +16,7 @@ public class CommentLikeController {
     @PostMapping("/{commentId}")
     public ResponseEntity<CommentLike> likeComment(@PathVariable Long commentId, @RequestBody CommentLike commentLike) {
         Comment comment = new Comment();
-        comment.setComment_id(commentId);
+        comment.setCommentId(commentId);
         commentLike.setComment(comment);
         return ResponseEntity.ok(commentLikeRepository.save(commentLike));
     }
