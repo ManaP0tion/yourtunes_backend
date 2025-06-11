@@ -59,13 +59,30 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
-    // 유저 단일 조회
+    /* 유저 단일 조회
     @GetMapping("/{userId}")
     public ResponseEntity<UserResponseDTO> getUser(@PathVariable int userId) {
         Optional<User> optionalUser = userRepository.findById(userId);
         if (optionalUser.isEmpty()) return ResponseEntity.status(404).build();
 
         User user = optionalUser.get();
+        UserResponseDTO dto = new UserResponseDTO();
+        dto.setUserId(user.getUserId());
+        dto.setUsername(user.getUsername());
+        dto.setUserEmail(user.getUserEmail());
+        dto.setUserBday(user.getUserBday());
+        dto.setUserImage(user.getUserImage());
+        dto.setUserCreate(user.getUserCreate());
+
+        return ResponseEntity.ok(dto);
+    }
+    */
+
+    @GetMapping("/username/{username}")
+    public ResponseEntity<UserResponseDTO> getUserByUsername(@PathVariable String username) {
+        User user = userRepository.findByUsername(username);
+        if (user == null) return ResponseEntity.status(404).build();
+
         UserResponseDTO dto = new UserResponseDTO();
         dto.setUserId(user.getUserId());
         dto.setUsername(user.getUsername());
@@ -95,7 +112,7 @@ public class UserController {
         return ResponseEntity.ok(result);
     }
 
-    // 유저 정보 수정
+    /* 유저 정보 수정
     @PutMapping("/{userId}")
     public ResponseEntity<String> updateUser(@PathVariable int userId, @RequestBody UserRequestDTO dto) {
         Optional<User> optionalUser = userRepository.findById(userId);
@@ -111,14 +128,33 @@ public class UserController {
         userRepository.save(user);
         return ResponseEntity.ok("User updated successfully");
     }
+    */
 
-    // 유저 삭제
-    @DeleteMapping("/{userId}")
-    public ResponseEntity<String> deleteUser(@PathVariable int userId) {
-        if (!userRepository.existsById(userId)) {
-            return ResponseEntity.status(404).body("User not found");
-        }
-        userRepository.deleteById(userId);
+    // 유저정보 수정
+    @PutMapping("/username/{username}")
+    public ResponseEntity<String> updateUserByUsername(@PathVariable String username, @RequestBody UserRequestDTO dto) {
+        User user = userRepository.findByUsername(username);
+        if (user == null) return ResponseEntity.status(404).body("User not found");
+
+        if (dto.getUsername() != null) user.setUsername(dto.getUsername());
+        if (dto.getUserEmail() != null) user.setUserEmail(dto.getUserEmail());
+        if (dto.getUserImage() != null) user.setUserImage(dto.getUserImage());
+        if (dto.getPassword() != null) user.setPassword(passwordEncoder.encode(dto.getPassword()));
+        if (dto.getUserBday() != null) user.setUserBday(dto.getUserBday());
+
+        userRepository.save(user);
+        return ResponseEntity.ok("User updated successfully");
+    }
+
+    // 유저삭제
+    @DeleteMapping("/username/{username}")
+    public ResponseEntity<String> deleteUserByUsername(@PathVariable String username) {
+        User user = userRepository.findByUsername(username);
+        if (user == null) return ResponseEntity.status(404).body("User not found");
+
+        userRepository.delete(user);
         return ResponseEntity.ok("User deleted successfully");
     }
+
+
 }
