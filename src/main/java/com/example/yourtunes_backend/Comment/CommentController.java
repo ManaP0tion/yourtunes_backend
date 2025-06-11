@@ -5,6 +5,7 @@ import com.example.yourtunes_backend.Post.PostRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -20,13 +21,21 @@ public class CommentController {
     }
 
     @PostMapping("/{postId}")
-    public ResponseEntity<Comment> addComment(@PathVariable Long postId, @RequestBody Comment comment) {
+    public ResponseEntity<Comment> addComment(
+            @PathVariable Long postId,
+            @RequestParam String username,
+            @RequestBody String content
+    ) {
         return postRepository.findById(postId)
                 .map(post -> {
+                    Comment comment = new Comment();
                     comment.setPost(post);
+                    comment.setContent(content);
+                    comment.setUserId(username);
+                    comment.setCreatedAt(LocalDateTime.now());
                     return ResponseEntity.ok(commentRepository.save(comment));
                 })
-                .orElseGet(() -> ResponseEntity.status(400).body(null)); // 실패 시 null 반환
+                .orElseGet(() -> ResponseEntity.status(400).body(null));
     }
 
     @GetMapping("/{postId}")

@@ -14,10 +14,23 @@ public class CommentLikeController {
     }
 
     @PostMapping("/{commentId}")
-    public ResponseEntity<CommentLike> likeComment(@PathVariable Long commentId, @RequestBody CommentLike commentLike) {
+    public ResponseEntity<CommentLike> likeComment(
+            @PathVariable Long commentId,
+            @RequestParam String username
+    ) {
         Comment comment = new Comment();
         comment.setCommentId(commentId);
+
+        CommentLike commentLike = new CommentLike();
         commentLike.setComment(comment);
+        commentLike.setUserId(username);
+
         return ResponseEntity.ok(commentLikeRepository.save(commentLike));
+    }
+
+    @GetMapping("/{commentId}/count")
+    public ResponseEntity<Long> getLikeCount(@PathVariable Long commentId) {
+        long count = commentLikeRepository.countByComment_CommentId(commentId);
+        return ResponseEntity.ok(count);
     }
 }

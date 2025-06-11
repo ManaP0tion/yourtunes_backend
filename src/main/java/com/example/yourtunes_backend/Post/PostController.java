@@ -1,6 +1,10 @@
 package com.example.yourtunes_backend.Post;
 
+import com.example.yourtunes_backend.Comment.Comment;
 import com.example.yourtunes_backend.Service.FileService;
+import com.example.yourtunes_backend.User.User;
+import com.example.yourtunes_backend.User.UserRepository;
+import com.example.yourtunes_backend.Comment.CommentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +20,8 @@ public class PostController {
 
     private final PostRepository postRepository;
     private final FileService fileService;
+    private final UserRepository userRepository;
+    private final CommentRepository CommentRepository;
 
     @PostMapping
     public ResponseEntity<?> createPost(
@@ -23,12 +29,12 @@ public class PostController {
             @RequestParam("content") String content,
             @RequestParam(value = "image", required = false) MultipartFile image,
             @RequestParam(value = "audio", required = false) MultipartFile audio,
-            @RequestParam("userId") String userId
+            @RequestParam("username") String username
     ) throws IOException {
         String audioPath = audio != null ? fileService.save(audio, "audio") : null;
         String imagePath = image != null ? fileService.save(image, "images") : null;
 
-        Post post = new Post(title, content, audioPath, imagePath, userId);
+        Post post = new Post(title, content, audioPath, imagePath, username);
         postRepository.save(post);
 
         return ResponseEntity.ok(post);
@@ -46,9 +52,14 @@ public class PostController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/user/{userId}")
-    public List<Post> getPostsByUser(@PathVariable String userId) {
-        return postRepository.findByUserId(userId);
+    @GetMapping("/user/{username}")
+    public ResponseEntity<List<Post>> getPostsByUsername(@PathVariable String username) {
+        User user = userRepository.findByUsername(username);
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
+        List<Post> posts = postRepository.findByUserId(String.valueOf(user.getUserId()));
+        return ResponseEntity.ok(posts);
     }
 
     @GetMapping("/search")
@@ -86,5 +97,10 @@ public class PostController {
         }
         postRepository.deleteById(id);
         return ResponseEntity.ok("Post deleted");
+    }
+
+    @GetMapping("/{postId}/comments")
+    public ResponseEntity<List<Comment>> getCommentsByPost(@PathVariable Long postId) {
+        return ResponseEntity.ok(CommentRepository.findByPostPostId(postId));
     }
 }
