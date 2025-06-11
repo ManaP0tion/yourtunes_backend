@@ -6,6 +6,7 @@ import com.example.yourtunes_backend.User.User;
 import com.example.yourtunes_backend.User.UserRepository;
 import com.example.yourtunes_backend.Comment.CommentRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -23,7 +24,7 @@ public class PostController {
     private final UserRepository userRepository;
     private final CommentRepository CommentRepository;
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> createPost(
             @RequestParam("title") String title,
             @RequestParam("content") String content,
