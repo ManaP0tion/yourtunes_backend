@@ -27,7 +27,8 @@ public class Post {
     private String userId;
 
     private LocalDateTime createdAt = LocalDateTime.now();
-
+    @Column(nullable = false)
+    private int viewCount = 0;
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<PostImage> images = new ArrayList<>();
