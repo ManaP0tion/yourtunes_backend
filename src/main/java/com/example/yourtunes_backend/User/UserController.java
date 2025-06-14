@@ -1,6 +1,7 @@
 package com.example.yourtunes_backend.User;
 
 import com.example.yourtunes_backend.Config.JwtTokenProvider;
+import com.example.yourtunes_backend.Follow.FollowRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +19,7 @@ public class UserController {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final FollowRepository followRepository;
 
     // 회원가입
     @PostMapping("/register")
@@ -152,6 +154,8 @@ public class UserController {
         User user = userRepository.findByUsername(username);
         if (user == null) return ResponseEntity.status(404).body("User not found");
 
+        followRepository.deleteAll(followRepository.findByFollowerUsername(username));
+        followRepository.deleteAll(followRepository.findByFollowingUsername(username));
         userRepository.delete(user);
         return ResponseEntity.ok("User deleted successfully");
     }
