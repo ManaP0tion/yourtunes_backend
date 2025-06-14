@@ -1,10 +1,16 @@
 package com.example.yourtunes_backend.Post;
 
 import com.example.yourtunes_backend.Comment.Comment;
+import com.example.yourtunes_backend.Comment.CommentRepository;
 import com.example.yourtunes_backend.Service.FileService;
 import com.example.yourtunes_backend.User.User;
 import com.example.yourtunes_backend.User.UserRepository;
-import com.example.yourtunes_backend.Comment.CommentRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -20,23 +26,44 @@ import java.util.List;
 public class PostController {
 
     private final PostRepository postRepository;
+    private final PostImageRepository postImageRepository;
     private final FileService fileService;
     private final UserRepository userRepository;
-    private final CommentRepository CommentRepository;
+    private final CommentRepository commentRepository;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "게시글 생성 (이미지, 오디오 업로드 가능)")
     public ResponseEntity<?> createPost(
-            @RequestParam("title") String title,
-            @RequestParam("content") String content,
-            @RequestParam(value = "image", required = false) MultipartFile image,
-            @RequestParam(value = "audio", required = false) MultipartFile audio,
-            @RequestParam("username") String username
+            @RequestPart("title")
+            @Schema(description = "제목")
+            String title,
+            @RequestPart("content")
+            @Schema(description = "내용")
+            String content,
+            @RequestPart("username")
+            @Schema(description = "작성자 username")
+            String username,
+            @RequestPart("images")
+            List<MultipartFile> images,
+            @RequestPart(value = "audio", required = false)
+            @Schema(description = "오디오 파일", type = "string", format = "binary")
+            MultipartFile audio
     ) throws IOException {
-        String audioPath = audio != null ? fileService.save(audio, "audio") : null;
-        String imagePath = image != null ? fileService.save(image, "images") : null;
+        String audioPath = (audio != null) ? fileService.save(audio, "audio") : null;
 
-        Post post = new Post(title, content, audioPath, imagePath, username);
+        Post post = new Post(title, content, audioPath, username);
         postRepository.save(post);
+
+        if (images != null && images.size() <= 10) {
+            for (MultipartFile image : images) {
+                String imagePath = fileService.save(image, "images");
+                PostImage postImage = new PostImage(imagePath, post);
+                post.getImages().add(postImage);
+            }
+            postRepository.save(post);
+        } else if (images != null) {
+            return ResponseEntity.badRequest().body("이미지는 최대 10장까지 업로드 가능합니다.");
+        }
 
         return ResponseEntity.ok(post);
     }
@@ -54,13 +81,12 @@ public class PostController {
     }
 
     @GetMapping("/user/{username}")
-    public ResponseEntity<List<Post>> getPostsByUsername(@PathVariable String username) {
-        User user = userRepository.findByUsername(username);
-        if (user == null) {
-            return ResponseEntity.notFound().build();
-        }
-        List<Post> posts = postRepository.findByUserId(String.valueOf(user.getUserId()));
-        return ResponseEntity.ok(posts);
+    public ResponseEntity<List<PostDTO>> getPostsByUsername(@PathVariable String username) {
+        List<Post> posts = postRepository.findByUserId(username); // username 직접 사용!
+        List<PostDTO> postDTOs = posts.stream()
+                .map(PostDTO::new)
+                .toList();
+        return ResponseEntity.ok(postDTOs);
     }
 
     @GetMapping("/search")
@@ -71,21 +97,30 @@ public class PostController {
     @PutMapping("/{id}")
     public ResponseEntity<?> updatePost(
             @PathVariable Long id,
-            @RequestParam("title") String title,
-            @RequestParam("content") String content,
-            @RequestParam(value = "image", required = false) MultipartFile image
+            @RequestPart("title") String title,
+            @RequestPart("content") String content,
+            @RequestPart(value = "images", required = false) List<MultipartFile> newImages
     ) throws IOException {
         return postRepository.findById(id).map(post -> {
             post.setTitle(title);
             post.setContent(content);
-            if (image != null) {
-                try {
-                    String newImagePath = fileService.save(image, "images");
-                    post.setImageUrl(newImagePath);
-                } catch (IOException e) {
-                    return ResponseEntity.status(500).body("Image upload failed");
+
+            post.getImages().clear();
+
+            if (newImages != null && newImages.size() <= 10) {
+                for (MultipartFile image : newImages) {
+                    try {
+                        String imagePath = fileService.save(image, "images");
+                        PostImage postImage = new PostImage(imagePath, post);
+                        post.getImages().add(postImage);
+                    } catch (IOException e) {
+                        return ResponseEntity.status(500).body("이미지 업로드 실패");
+                    }
                 }
+            } else if (newImages != null) {
+                return ResponseEntity.badRequest().body("이미지는 최대 10장까지 업로드 가능합니다.");
             }
+
             postRepository.save(post);
             return ResponseEntity.ok(post);
         }).orElse(ResponseEntity.notFound().build());
@@ -102,6 +137,6 @@ public class PostController {
 
     @GetMapping("/{postId}/comments")
     public ResponseEntity<List<Comment>> getCommentsByPost(@PathVariable Long postId) {
-        return ResponseEntity.ok(CommentRepository.findByPostPostId(postId));
+        return ResponseEntity.ok(commentRepository.findByPostPostId(postId));
     }
 }

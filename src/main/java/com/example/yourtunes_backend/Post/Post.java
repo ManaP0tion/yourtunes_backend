@@ -1,14 +1,12 @@
 package com.example.yourtunes_backend.Post;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import jakarta.persistence.*;
+import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -25,18 +23,20 @@ public class Post {
     private String content;
 
     private String audioUrl;
-    private String imageUrl;
 
     private String userId;
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    public Post(String title, String content, String audioUrl, String imageUrl, String userId) {
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<PostImage> images = new ArrayList<>();
+
+    public Post(String title, String content, String audioUrl, String userId) {
         this.title = title;
         this.content = content;
         this.audioUrl = audioUrl;
-        this.imageUrl = imageUrl;
         this.userId = userId;
-        this.createdAt = LocalDateTime.now(); // 기본값 지정
+        this.createdAt = LocalDateTime.now();
     }
 }
