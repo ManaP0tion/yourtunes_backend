@@ -21,4 +21,5 @@ public class WebConfig implements WebMvcConfigurer {
                 .addResourceLocations("file:uploads/"); // 실제 파일 경로
     }
 
+
 }

@@ -28,7 +28,7 @@ public class User {
     @Column
     private LocalDate userBday;
 
-    @Column(length = 16)
+    @Column(length = 256)
     private String userImage;
 
     @Column

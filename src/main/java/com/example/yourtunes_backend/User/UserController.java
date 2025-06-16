@@ -4,10 +4,13 @@ import com.example.yourtunes_backend.Config.JwtTokenProvider;
 import com.example.yourtunes_backend.Follow.FollowRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.*;
 
@@ -21,20 +24,38 @@ public class UserController {
     private final JwtTokenProvider jwtTokenProvider;
     private final FollowRepository followRepository;
 
-    // 회원가입
-    @PostMapping("/register")
-    public ResponseEntity<String> register(@RequestBody @Valid UserRequestDTO userDTO) {
-        if (userRepository.findByUsername(userDTO.getUsername()) != null ||
-                userRepository.findByUserEmail(userDTO.getUserEmail()) != null) {
+    // 회원가입 (multipart/form-data 지원)
+    @PostMapping(value = "/register", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<String> register(
+            @RequestParam String username,
+            @RequestParam String password,
+            @RequestParam String userEmail,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate userBday,
+            @RequestPart(value = "userImage", required = false) MultipartFile userImageFile
+    ) {
+        if (userRepository.findByUsername(username) != null || userRepository.findByUserEmail(userEmail) != null) {
             return ResponseEntity.status(409).body("Username or Email already exists");
         }
 
+        String imagePath = null;
+        if (userImageFile != null && !userImageFile.isEmpty()) {
+            String fileName = java.util.UUID.randomUUID() + "_" + userImageFile.getOriginalFilename();
+            java.nio.file.Path path = java.nio.file.Paths.get("uploads", fileName);
+            try {
+                java.nio.file.Files.createDirectories(path.getParent());
+                java.nio.file.Files.write(path, userImageFile.getBytes());
+                imagePath = "/uploads/" + fileName;
+            } catch (java.io.IOException e) {
+                return ResponseEntity.status(500).body("Failed to save image");
+            }
+        }
+
         User user = new User();
-        user.setUsername(userDTO.getUsername());
-        user.setPassword(passwordEncoder.encode(userDTO.getPassword()));
-        user.setUserEmail(userDTO.getUserEmail());
-        user.setUserBday(userDTO.getUserBday());
-        user.setUserImage(userDTO.getUserImage());
+        user.setUsername(username);
+        user.setPassword(passwordEncoder.encode(password));
+        user.setUserEmail(userEmail);
+        user.setUserBday(userBday);
+        user.setUserImage(imagePath);
         user.setUserCreate(LocalDate.now());
 
         userRepository.save(user);
