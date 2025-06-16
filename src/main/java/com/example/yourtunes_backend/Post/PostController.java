@@ -6,11 +6,7 @@ import com.example.yourtunes_backend.Service.FileService;
 import com.example.yourtunes_backend.User.User;
 import com.example.yourtunes_backend.User.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-
 import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -43,8 +39,7 @@ public class PostController {
             @RequestPart("username")
             @Schema(description = "작성자 username")
             String username,
-            @RequestPart("images")
-            List<MultipartFile> images,
+            @RequestPart(value = "images", required = false) List<MultipartFile> images,
             @RequestPart(value = "audio", required = false)
             @Schema(description = "오디오 파일", type = "string", format = "binary")
             MultipartFile audio
@@ -65,7 +60,7 @@ public class PostController {
             return ResponseEntity.badRequest().body("이미지는 최대 10장까지 업로드 가능합니다.");
         }
 
-        return ResponseEntity.ok(post);
+        return ResponseEntity.ok(new PostDTO(post));
     }
 
     @GetMapping
@@ -74,15 +69,17 @@ public class PostController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getPostById(@PathVariable Long id) {
-        return postRepository.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<Post> getPostById(@PathVariable Long id) {
+        return postRepository.findById(id).map(post -> {
+            post.setViewCount(post.getViewCount() + 1);
+            postRepository.save(post);
+            return ResponseEntity.ok(post);
+        }).orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/user/{username}")
     public ResponseEntity<List<PostDTO>> getPostsByUsername(@PathVariable String username) {
-        List<Post> posts = postRepository.findByUserId(username); // username 직접 사용!
+        List<Post> posts = postRepository.findByUserId(username);
         List<PostDTO> postDTOs = posts.stream()
                 .map(PostDTO::new)
                 .toList();
@@ -138,5 +135,12 @@ public class PostController {
     @GetMapping("/{postId}/comments")
     public ResponseEntity<List<Comment>> getCommentsByPost(@PathVariable Long postId) {
         return ResponseEntity.ok(commentRepository.findByPostPostId(postId));
+    }
+
+    @GetMapping("/top10")
+    public ResponseEntity<List<PostDTO>> getTop10Posts() {
+        List<Post> topPosts = postRepository.findTop10ByOrderByViewCountDesc();
+        List<PostDTO> result = topPosts.stream().map(PostDTO::new).toList();
+        return ResponseEntity.ok(result);
     }
 }

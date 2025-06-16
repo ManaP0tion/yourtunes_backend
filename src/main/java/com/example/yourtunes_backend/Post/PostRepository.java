@@ -6,5 +6,6 @@ import java.util.List;
 public interface PostRepository extends JpaRepository<Post, Long> {
     List<Post> findByUserId(String userId);
     List<Post> findByTitleContainingIgnoreCase(String keyword);
+    List<Post> findTop10ByOrderByViewCountDesc();
 
 }
